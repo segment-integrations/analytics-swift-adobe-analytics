@@ -1,0 +1,61 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "AEPAnalytics",
+        "repositoryURL": "https://github.com/adobe/aepsdk-analytics-ios.git",
+        "state": {
+          "branch": null,
+          "revision": "3540865cbeaa13d90b1a4307e6b3bd0ac30d1974",
+          "version": "3.2.0"
+        }
+      },
+      {
+        "package": "AEPCore",
+        "repositoryURL": "https://github.com/adobe/aepsdk-core-ios.git",
+        "state": {
+          "branch": null,
+          "revision": "aa80812e4b0390f90b6cf57d87b32c851c6ca272",
+          "version": "3.7.3"
+        }
+      },
+      {
+        "package": "AEPMedia",
+        "repositoryURL": "https://github.com/adobe/aepsdk-media-ios.git",
+        "state": {
+          "branch": null,
+          "revision": "11f53abacdd8bf54267426225e3f4d1b19ed5f3d",
+          "version": "3.1.0"
+        }
+      },
+      {
+        "package": "AEPRulesEngine",
+        "repositoryURL": "https://github.com/adobe/aepsdk-rulesengine-ios.git",
+        "state": {
+          "branch": null,
+          "revision": "5907e2ed364135448a2a5d77a76c2ff971396397",
+          "version": "1.2.0"
+        }
+      },
+      {
+        "package": "Segment",
+        "repositoryURL": "https://github.com/segmentio/analytics-swift",
+        "state": {
+          "branch": "main",
+          "revision": "36a1546a8db03ce1a3d768e76fd5ce961e2879e3",
+          "version": null
+        }
+      },
+      {
+        "package": "Sovran",
+        "repositoryURL": "https://github.com/segmentio/Sovran-Swift.git",
+        "state": {
+          "branch": null,
+          "revision": "944c17d7c46bd95fc37f09136cabd172be5b413b",
+          "version": "1.0.3"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
