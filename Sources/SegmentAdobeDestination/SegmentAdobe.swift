@@ -53,6 +53,7 @@ public class SegmentAdobe: DestinationPlugin {
     
     private var contextValues = [String: Any]()
     private var segmentSettings: Settings!
+    var mediaTracker: MediaTracker!
     
     public init(appId: String) {
         // Enable debug logging
@@ -89,7 +90,7 @@ public class SegmentAdobe: DestinationPlugin {
     
     public func track(event: TrackEvent) -> TrackEvent? {
         
-        var trackEvent = event.event
+        let trackEvent = event.event
         
         // You can send ecommerce events via either a trackAction or trackState call.
         // Since Segment does not spec sending products on `screen`, we
@@ -104,11 +105,14 @@ public class SegmentAdobe: DestinationPlugin {
             return event;
         }
         
-        //TODO: Video events
         if SegmentAdobe.adobeVideoEvents.contains(trackEvent) {
-            
+            for videoEvent in SegmentAdobe.adobeVideoEvents {
+                if videoEvent == trackEvent {
+                    trackVideoEvents(event: event)
+                }
+                return event
+            }
         }
-        
         
         let mappedEvent = mapEventsV2(event: trackEvent) ?? ""
         if mappedEvent != trackEvent {
@@ -124,7 +128,7 @@ public class SegmentAdobe: DestinationPlugin {
         
         return event
     }
-        
+    
     public func screen(event: ScreenEvent) -> ScreenEvent? {
         let topLevelProperties = extractSEGTopLevelProps(screenEvent: event)
         if let prop = event.properties, let context = event.context , let topLevelProps = topLevelProperties {
@@ -148,18 +152,18 @@ public class SegmentAdobe: DestinationPlugin {
     ///-------------------------
     /// @name Mapping
     ///-------------------------
-
+    
     /**
      All context data variables must be mapped by using processing rules,
      meaning they must be configured as a context variable in Adobe's UI
      and mapped from a Segment Property or from within Payload.Context
      to the configured variable in Adobe.
-
+     
      @param properties Segment  payload.properties
      @param context Segment  payload.context
      @param topLevelProps NSMutableDictionary of extracted top level payload properties
      @return data Dictionary of context data with Adobe key
-    **/
+     **/
     
     private func mapContextValues(properties: JSON, context: JSON, topLevelProps: [String: Any]) -> [String: Any]? {
         
@@ -372,15 +376,15 @@ public class SegmentAdobe: DestinationPlugin {
     }
     
     /**
-        In order to respect Adobe's event naming convention, Segment
-        has a setting eventsV2 to transform Segment events to
-        Adobe's convention.
-
-        If an event is not configured, Segment will not send the
-        event to Adobe.
-
-        @param event Event name sent via track
-        @return eventV2 Adobe configured event name
+     In order to respect Adobe's event naming convention, Segment
+     has a setting eventsV2 to transform Segment events to
+     Adobe's convention.
+     
+     If an event is not configured, Segment will not send the
+     event to Adobe.
+     
+     @param event Event name sent via track
+     @return eventV2 Adobe configured event name
      **/
     
     private func mapEventsV2(event: String)-> String? {
@@ -396,6 +400,279 @@ public class SegmentAdobe: DestinationPlugin {
     
     //Video Tracking
     
+    private func createTrackerConfig(event: TrackEvent) -> MediaTracker {
+        
+        let properties = event.properties?.dictionaryValue
+        var config = [String: Any]()
+        
+        // Overrides channel configured in the Data Collection UI
+        if let channel = properties?["channel"] as? String {
+            config[MediaConstants.TrackerConfig.CHANNEL] = channel
+        }
+        
+        // Creates downloaded content tracker
+        config[MediaConstants.TrackerConfig.DOWNLOADED_CONTENT] = true
+
+        let tracker = Media.createTrackerWith(config: config)
+        
+        return tracker
+    }
+    
+    /**
+     Event tracking for Adobe Video Events.
+
+     @param payload Payload sent on Segment `track` call
+     */
+    
+    private func trackVideoEvents(event: TrackEvent) {
+        
+        switch (event.event)  {
+            
+          case "Video Playback Started":
+            mediaTracker = createTrackerConfig(event: event)
+            // mediaTracker can return nil if the Adobe required field
+            // trackingServer is not properly configured in Segment's UI.
+            if (mediaTracker == nil) {
+                return
+            }
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Playback") else { return }
+            
+            var videoMetadata = [String: String]()
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+                mediaTracker.trackSessionStart(info: mediaObject, metadata: nil)
+                return
+            }
+            videoMetadata = contextData.compactMapValues { "\($0)" }
+            mediaTracker.trackSessionStart(info: mediaObject, metadata: videoMetadata)
+            analytics?.log(message: "Media tracks Started")
+            return
+
+          case "Video Playback Paused":
+            
+            mediaTracker.trackPause()
+            analytics?.log(message: "Media tracks Pause")
+            return
+            
+        case "Video Playback Resumed":
+            
+            mediaTracker.trackPlay()
+            analytics?.log(message: "Media tracks Resumed")
+            return
+            
+        case "Video Playback Completed":
+                    
+            mediaTracker.trackComplete()
+            analytics?.log(message: "Media track Completed")
+            mediaTracker.trackSessionEnd()
+            analytics?.log(message: "Media track Session End")
+            return
+            
+        case "Video Content Started":
+            
+            mediaTracker.trackPlay()
+            analytics?.log(message: "trackPlay")
+            
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Content") else { return }
+            
+            var videoMetadata = [String: String]()
+            
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+                mediaTracker.trackEvent(event: MediaEvent.ChapterStart, info: mediaObject, metadata: nil)
+                return
+            }
+            videoMetadata = contextData.compactMapValues { "\($0)" }
+
+            mediaTracker.trackEvent(event: MediaEvent.ChapterStart, info: mediaObject, metadata: videoMetadata)
+            analytics?.log(message: "MediaEvent Chapter Start")
+            return
+            
+        case "Video Content Completed":
+            mediaTracker.trackEvent(event: MediaEvent.ChapterComplete, info: nil, metadata: nil)
+            analytics?.log(message: "MediaEvent ChapterComplete")
+            return
+            
+        case "Video Playback Interrupted":
+            mediaTracker.trackPause()
+            return
+            
+        case "Video Playback Buffer Started":
+            mediaTracker.trackPause()
+            
+            mediaTracker.trackEvent(event: MediaEvent.BufferStart, info: nil, metadata: nil)
+            return
+            
+        case "Video Playback Seek Started":
+            mediaTracker.trackPause()
+            
+            mediaTracker.trackEvent(event: MediaEvent.SeekStart, info: nil, metadata: nil)
+            return
+            
+        case "Video Playback Buffer Completed":
+            let position = event.properties?.dictionaryValue?["position"] as? Double ?? 0
+            mediaTracker.trackPlay()
+            mediaTracker.updateCurrentPlayhead(time: position)
+            
+            mediaTracker.trackEvent(event: MediaEvent.BufferComplete, info: nil, metadata: nil)
+            analytics?.log(message: "MediaEvent BufferComplete")
+            return
+            
+        case "Video Playback Seek Completed":
+            let position = event.properties?.dictionaryValue?["position"] as? Double ?? 0
+            mediaTracker.trackPlay()
+            mediaTracker.updateCurrentPlayhead(time: position)
+            
+            mediaTracker.trackEvent(event: MediaEvent.SeekComplete, info: nil, metadata: nil)
+            analytics?.log(message: "SeekComplete")
+            return
+            
+        case "Video Ad Break Started":
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Ad Break") else { return }
+            mediaTracker.trackEvent(event: MediaEvent.AdBreakStart, info: mediaObject, metadata: nil)
+            analytics?.log(message: "MediaEvent AdBreakStart")
+            return
+            
+        case "Video Ad Break Completed":
+            mediaTracker.trackEvent(event: MediaEvent.AdBreakComplete, info: nil, metadata: nil)
+            analytics?.log(message: "MediaEvent AdBreakComplete")
+            return
+            
+        case "Video Ad Started":
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Ad") else { return }
+            var videoMetadata = [String: String]()
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+                mediaTracker.trackEvent(event: MediaEvent.AdStart, info: mediaObject, metadata: nil)
+                return
+            }
+            videoMetadata = contextData.compactMapValues { "\($0)" }
+            mediaTracker.trackEvent(event: MediaEvent.AdStart, info: mediaObject, metadata: videoMetadata)
+            analytics?.log(message: "MediaEvent AdStart")
+          return
+            
+        case "Video Ad Skipped":
+            mediaTracker.trackEvent(event: MediaEvent.AdSkip, info: nil, metadata: nil)
+            analytics?.log(message: "MediaEvent AdSkip")
+            return
+            
+        case "Video Ad Completed":
+            mediaTracker.trackEvent(event: MediaEvent.AdComplete, info: nil, metadata: nil)
+            analytics?.log(message: "MediaEvent AdComplete")
+            return
+            
+        case "Video Quality Updated":
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event) else { return }
+            let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)
+            let bitrate = contextData?["bitrate"] as? Double ?? 0
+            let startupTime = contextData?["startup_time"] as? Double ?? 0
+            let fps = contextData?["fps"] as? Double ?? 0
+            let droppedFrames = contextData?["dropped_frames"] as? Double ?? 0
+            guard let qoeObject = Media.createQoEObjectWith(bitrate: bitrate, startupTime: startupTime, fps: fps, droppedFrames: droppedFrames) else { return }
+            mediaTracker.updateQoEObject(qoe: qoeObject)
+            return
+            
+          default:
+            break
+        }
+    }
+    
+    private func createWithProperties(properties: [String: Any], eventType: String) -> [String: Any]? {
+        let videoName = properties["title"] as? String ?? ""
+        let mediaId = properties["content_asset_id"] as? String ?? ""
+        let length = properties["total_length"] as? Double ?? 0
+        let adId = properties["asset_id"] as? String ?? ""
+        
+        // TODO: not spec'd, follow up with spec committee proposal
+        
+        let startTime = properties["start_time"] as? Double ?? 0
+        let position = properties["indexPosition"] as? Int ?? 0
+        
+        // Adobe also has a third type: linear, which we have chosen
+        // to omit as it does not conform to Segment's Video spec
+        
+        let isLivestream = properties["livestream"] as? Bool ?? false
+        
+        var streamType = MediaConstants.StreamType.VOD
+        
+        if isLivestream {
+            streamType = MediaConstants.StreamType.LIVE
+        }
+        
+        if eventType == "Playback" {
+            return Media.createMediaObjectWith(name: videoName, id: mediaId, length: length, streamType: streamType, mediaType: MediaType.Video)
+            
+        } else if eventType == "Content" {
+            return Media.createChapterObjectWith(name: videoName, position: position, length: length, startTime: startTime)
+        } else if eventType == "Ad Break" {
+            return Media.createAdBreakObjectWith(name: videoName, position: position, startTime: startTime)
+        } else if eventType == "Ad" {
+            return Media.createAdObjectWith(name: videoName, id: adId, position: position, length: length)
+        } else {
+            analytics?.log(message: "Event type not passed through.")
+        }
+        return nil
+    }
+    
+    /**
+     Adobe has standard video metadata to pass in on
+     Segment's Video Playback events.
+     
+     @param properties Properties passed in on Segment `track`
+     @return A dictionary of mapped Standard Video metadata
+     */
+    
+    private func mapStandardVideoMetadata(properties: [String: Any], eventType: String) -> [String: Any] {
+        
+        let videoMetadata: [String: Any] = [
+            "asset_id" : MediaConstants.VideoMetadataKeys.ASSET_ID,
+            "program" : MediaConstants.VideoMetadataKeys.SHOW,
+            "season" : MediaConstants.VideoMetadataKeys.SEASON,
+            "episode" : MediaConstants.VideoMetadataKeys.EPISODE,
+            "genre" : MediaConstants.VideoMetadataKeys.GENRE,
+            "channel" : MediaConstants.VideoMetadataKeys.NETWORK,
+            "airdate" : MediaConstants.VideoMetadataKeys.FIRST_AIR_DATE,
+        ]
+        
+        var standardVideoMetadata = [String: Any]()
+        
+        for (key, _) in videoMetadata {
+            if (properties[key] != nil) {
+                let videoMetadataKey = videoMetadata[key] as! String
+                standardVideoMetadata[videoMetadataKey] = properties[key]
+            }
+        }
+        // Segment's publisher property exists on the content and ad level. Adobe
+        // needs to interpret this either as and Advertiser (ad events) or Originator (content events)
+        
+        let publisher = properties["publisher"] as? String
+        
+        if eventType == "Ad" || eventType == "Ad Break" && publisher?.isEmpty == false {
+            standardVideoMetadata[MediaConstants.AdMetadataKeys.ADVERTISER] = properties["publisher"]
+        } else if eventType == "Content" && publisher?.isEmpty == false {
+            standardVideoMetadata[MediaConstants.VideoMetadataKeys.ORIGINATOR] = properties["publisher"]
+        }
+        
+        // Adobe also has a third type: linear, which we have chosen
+        // to omit as it does not conform to Segment's Video spec
+        let isLivestream = properties["livestream"] as? Bool
+        
+        if isLivestream == true {
+            standardVideoMetadata[MediaConstants.VideoMetadataKeys.STREAM_FORMAT] = MediaConstants.StreamType.LIVE
+        } else{
+            standardVideoMetadata[MediaConstants.VideoMetadataKeys.STREAM_FORMAT] = MediaConstants.StreamType.VOD
+        }
+        
+        return standardVideoMetadata
+    }
+
+    
+    private func createMediaObject(properties: [String: Any], eventType: String) -> [String: Any]? {
+        //Created mediaObject according to eventType
+        var mediaObject = createWithProperties(properties: properties, eventType: eventType)
+        //Mapping with standard events
+        let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: eventType)
+        mediaObject?["ADBMediaObjectKeyStandardVideoMetadata"] = standardVideoMetadata
+        return mediaObject
+    }
+    
 }
 
 extension SegmentAdobe: VersionedPlugin {
@@ -406,6 +683,7 @@ extension SegmentAdobe: VersionedPlugin {
 
 private struct SegmentAdobeSettings: Codable {
     let apiKey: String?
+    let ssl: Bool?
 }
 
 private extension SegmentAdobe {
@@ -435,13 +713,5 @@ private extension SegmentAdobe {
                                    "Video Ad Completed",
                                    "Video Quality Updated"]
     
-    static var eventValueConversion: ((_ key: String, _ value: Any) -> Any) = { (key, value) in
-        if let valueString = value as? String {
-            return valueString
-                .replacingOccurrences(of: "-", with: "_")
-                .replacingOccurrences(of: " ", with: "_")
-        } else {
-            return value
-        }
-    }
 }
+
