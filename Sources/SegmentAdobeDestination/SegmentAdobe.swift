@@ -435,32 +435,36 @@ public class SegmentAdobe: DestinationPlugin {
             if (mediaTracker == nil) {
                 return
             }
-            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Playback") else { return }
             
-            var videoMetadata = [String: String]()
-            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
-                mediaTracker.trackSessionStart(info: mediaObject, metadata: nil)
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createWithProperties(properties: properties, eventType: "Playback") else {
                 return
             }
-            videoMetadata = contextData.compactMapValues { "\($0)" }
+            
+            //Mapping with standard events
+            let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: "Playback")
+            
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+                return
+            }
+            let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
+            var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
+            videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
+            debugPrint("videoMetadata", videoMetadata)
             mediaTracker.trackSessionStart(info: mediaObject, metadata: videoMetadata)
             analytics?.log(message: "Media tracks Started")
             return
 
           case "Video Playback Paused":
-            
             mediaTracker.trackPause()
             analytics?.log(message: "Media tracks Pause")
             return
             
         case "Video Playback Resumed":
-            
             mediaTracker.trackPlay()
             analytics?.log(message: "Media tracks Resumed")
             return
             
         case "Video Playback Completed":
-                    
             mediaTracker.trackComplete()
             analytics?.log(message: "Media track Completed")
             mediaTracker.trackSessionEnd()
@@ -468,20 +472,22 @@ public class SegmentAdobe: DestinationPlugin {
             return
             
         case "Video Content Started":
-            
             mediaTracker.trackPlay()
             analytics?.log(message: "trackPlay")
             
-            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Content") else { return }
-            
-            var videoMetadata = [String: String]()
-            
-            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
-                mediaTracker.trackEvent(event: MediaEvent.ChapterStart, info: mediaObject, metadata: nil)
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createWithProperties(properties: properties, eventType: "Content") else {
                 return
             }
-            videoMetadata = contextData.compactMapValues { "\($0)" }
-
+            
+            //Mapping with standard events
+            let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: "Content")
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+                return
+            }
+            let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
+            var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
+            videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
+            debugPrint("videoMetadata", videoMetadata)
             mediaTracker.trackEvent(event: MediaEvent.ChapterStart, info: mediaObject, metadata: videoMetadata)
             analytics?.log(message: "MediaEvent Chapter Start")
             return
@@ -493,25 +499,25 @@ public class SegmentAdobe: DestinationPlugin {
             
         case "Video Playback Interrupted":
             mediaTracker.trackPause()
+            analytics?.log(message: "MediaEvent Interrupted")
             return
             
         case "Video Playback Buffer Started":
             mediaTracker.trackPause()
-            
             mediaTracker.trackEvent(event: MediaEvent.BufferStart, info: nil, metadata: nil)
+            analytics?.log(message: "MediaEvent Buffer Started")
             return
             
         case "Video Playback Seek Started":
             mediaTracker.trackPause()
-            
             mediaTracker.trackEvent(event: MediaEvent.SeekStart, info: nil, metadata: nil)
+            analytics?.log(message: "MediaEvent Seek Started")
             return
             
         case "Video Playback Buffer Completed":
             let position = event.properties?.dictionaryValue?["position"] as? Double ?? 0
             mediaTracker.trackPlay()
             mediaTracker.updateCurrentPlayhead(time: position)
-            
             mediaTracker.trackEvent(event: MediaEvent.BufferComplete, info: nil, metadata: nil)
             analytics?.log(message: "MediaEvent BufferComplete")
             return
@@ -520,13 +526,14 @@ public class SegmentAdobe: DestinationPlugin {
             let position = event.properties?.dictionaryValue?["position"] as? Double ?? 0
             mediaTracker.trackPlay()
             mediaTracker.updateCurrentPlayhead(time: position)
-            
             mediaTracker.trackEvent(event: MediaEvent.SeekComplete, info: nil, metadata: nil)
             analytics?.log(message: "SeekComplete")
             return
             
         case "Video Ad Break Started":
-            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Ad Break") else { return }
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createWithProperties(properties: properties, eventType: "Ad Break") else {
+                return
+            }
             mediaTracker.trackEvent(event: MediaEvent.AdBreakStart, info: mediaObject, metadata: nil)
             analytics?.log(message: "MediaEvent AdBreakStart")
             return
@@ -537,13 +544,18 @@ public class SegmentAdobe: DestinationPlugin {
             return
             
         case "Video Ad Started":
-            guard let properties = event.properties?.dictionaryValue, let mediaObject = createMediaObject(properties: properties, eventType: "Ad") else { return }
-            var videoMetadata = [String: String]()
-            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
-                mediaTracker.trackEvent(event: MediaEvent.AdStart, info: mediaObject, metadata: nil)
+            guard let properties = event.properties?.dictionaryValue, let mediaObject = createWithProperties(properties: properties, eventType: "Ad") else {
                 return
             }
-            videoMetadata = contextData.compactMapValues { "\($0)" }
+            //Mapping with standard events
+            let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: "Ad")
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+                return
+            }
+            let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
+            var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
+            videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
+            debugPrint("videoMetadata", videoMetadata)
             mediaTracker.trackEvent(event: MediaEvent.AdStart, info: mediaObject, metadata: videoMetadata)
             analytics?.log(message: "MediaEvent AdStart")
           return
@@ -579,9 +591,6 @@ public class SegmentAdobe: DestinationPlugin {
         let mediaId = properties["content_asset_id"] as? String ?? ""
         let length = properties["total_length"] as? Double ?? 0
         let adId = properties["asset_id"] as? String ?? ""
-        
-        // TODO: not spec'd, follow up with spec committee proposal
-        
         let startTime = properties["start_time"] as? Double ?? 0
         let position = properties["indexPosition"] as? Int ?? 0
         
@@ -662,17 +671,6 @@ public class SegmentAdobe: DestinationPlugin {
         
         return standardVideoMetadata
     }
-
-    
-    private func createMediaObject(properties: [String: Any], eventType: String) -> [String: Any]? {
-        //Created mediaObject according to eventType
-        var mediaObject = createWithProperties(properties: properties, eventType: eventType)
-        //Mapping with standard events
-        let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: eventType)
-        mediaObject?["ADBMediaObjectKeyStandardVideoMetadata"] = standardVideoMetadata
-        return mediaObject
-    }
-    
 }
 
 extension SegmentAdobe: VersionedPlugin {
