@@ -39,7 +39,6 @@ import AEPCore
 import AEPMedia
 import AEPIdentity
 import AEPAnalytics
-import AEPAssurance
 
 
 public class SegmentAdobe: DestinationPlugin {
@@ -122,8 +121,15 @@ public class SegmentAdobe: DestinationPlugin {
         
         if let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event) {
             let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)
-            MobileCore.track(action: trackEvent, data: contextData)
+            if contextData != nil {
+                MobileCore.track(action: trackEvent, data: contextData)
+            } else {
+                MobileCore.track(action: trackEvent, data: event.properties?.dictionaryValue ?? nil)
+            }
             analytics?.log(message: "Adobe Analytics trackAction - \(trackEvent)")
+        } else{
+            debugPrint(event.properties?.dictionaryValue)
+            MobileCore.track(action: trackEvent, data: event.properties?.dictionaryValue ?? nil)
         }
         
         return event
@@ -391,7 +397,7 @@ public class SegmentAdobe: DestinationPlugin {
         if let events = segmentSettings.integrationSettings(forKey: key)?["eventsV2"] as? [String: Any] {
             for (key,_) in events {
                 if key == event {
-                    return events[key] as? String
+                    return event
                 }
             }
         }
