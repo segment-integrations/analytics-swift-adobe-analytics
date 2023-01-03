@@ -128,7 +128,6 @@ public class SegmentAdobe: DestinationPlugin {
             }
             analytics?.log(message: "Adobe Analytics trackAction - \(trackEvent)")
         } else{
-            debugPrint(event.properties?.dictionaryValue)
             MobileCore.track(action: trackEvent, data: event.properties?.dictionaryValue ?? nil)
         }
         
@@ -139,7 +138,6 @@ public class SegmentAdobe: DestinationPlugin {
         let topLevelProperties = extractSEGTopLevelProps(screenEvent: event)
         if let prop = event.properties, let context = event.context , let topLevelProps = topLevelProperties {
             let dataDict = mapContextValues(properties: prop, context: context, topLevelProps: topLevelProps)
-            debugPrint("dataDict screen ----", dataDict ?? [:])
             MobileCore.track(state: event.name, data: dataDict)
         } else if topLevelProperties?.isEmpty == false {
             MobileCore.track(state: event.name, data: topLevelProperties)
@@ -172,7 +170,6 @@ public class SegmentAdobe: DestinationPlugin {
      **/
     
     private func mapContextValues(properties: JSON, context: JSON, topLevelProps: [String: Any]) -> [String: Any]? {
-        debugPrint("contextValues", contextValues)
         if (properties.dictionaryValue?.isEmpty == false || context.dictionaryValue?.isEmpty == false) && contextValues.count > 0 {
             var dataDict = [String: Any]()
             
@@ -188,7 +185,6 @@ public class SegmentAdobe: DestinationPlugin {
                         let parsedKey = arrayofKeyComponents[1]
                         if !contextTraits.isEmpty && (contextTraits[parsedKey] != nil) {
                             dataDict[contextValues[key] as? String ?? key] = contextTraits[parsedKey]
-                            debugPrint("dataDict", dataDict)
                         }
                     }
                 }
@@ -216,7 +212,6 @@ public class SegmentAdobe: DestinationPlugin {
             let topLevelProperties = ["event", "messageId", "anonymousId", "name"]
             if topLevelProperties.contains(key) && (topLevelProps[key] != nil) {
                 dataDict[contextValues[key] as! String] = topLevelProps[key]
-                debugPrint("dataDict", dataDict)
             }
             
             if !dataDict.isEmpty{
@@ -447,14 +442,13 @@ public class SegmentAdobe: DestinationPlugin {
             
             //Mapping with standard events
             let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: "Playback")
-            
-            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
-                return
+            var contextData = [String: Any]()
+            if let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event) {
+                contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties) ?? [:]
             }
             let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
-            debugPrint("videoMetadata", videoMetadata)
             mediaTracker.trackSessionStart(info: mediaObject, metadata: videoMetadata)
             analytics?.log(message: "Media tracks Started")
             return
@@ -492,7 +486,6 @@ public class SegmentAdobe: DestinationPlugin {
             let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
-            debugPrint("videoMetadata", videoMetadata)
             mediaTracker.trackEvent(event: MediaEvent.ChapterStart, info: mediaObject, metadata: videoMetadata)
             analytics?.log(message: "MediaEvent Chapter Start")
             return
@@ -560,7 +553,6 @@ public class SegmentAdobe: DestinationPlugin {
             let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
-            debugPrint("videoMetadata", videoMetadata)
             mediaTracker.trackEvent(event: MediaEvent.AdStart, info: mediaObject, metadata: videoMetadata)
             analytics?.log(message: "MediaEvent AdStart")
           return
@@ -592,7 +584,7 @@ public class SegmentAdobe: DestinationPlugin {
     }
     
     private func createWithProperties(properties: [String: Any], eventType: String) -> [String: Any]? {
-        let videoName = properties["title"] as? String ?? ""
+        let videoName = properties["title"] as? String ?? "Video-Name"
         let mediaId = properties["content_asset_id"] as? String ?? ""
         let length = properties["total_length"] as? Double ?? 0
         let adId = properties["asset_id"] as? String ?? ""
@@ -621,8 +613,8 @@ public class SegmentAdobe: DestinationPlugin {
             return Media.createAdObjectWith(name: videoName, id: adId, position: position, length: length)
         } else {
             analytics?.log(message: "Event type not passed through.")
+            return nil
         }
-        return nil
     }
     
     /**
