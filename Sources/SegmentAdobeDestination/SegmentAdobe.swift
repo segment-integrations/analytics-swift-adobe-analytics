@@ -99,8 +99,8 @@ public class SegmentAdobe: DestinationPlugin {
             if let properties = event.properties, let context = event.context , let trackEcommEvent = SegmentAdobe.adobeEcommerceEvents[trackEvent] {
                 let mappedProducts = mapProducts(event: trackEcommEvent, properties: properties, context: context, payload: event)
                 MobileCore.track(action: trackEcommEvent, data: mappedProducts)
+                analytics?.log(message: "Adobe Analytics trackAction - \(trackEvent)")
             }
-            analytics?.log(message: "Adobe Analytics trackAction - \(trackEvent)")
             return event;
         }
         
@@ -172,8 +172,8 @@ public class SegmentAdobe: DestinationPlugin {
      **/
     
     private func mapContextValues(properties: JSON, context: JSON, topLevelProps: [String: Any]) -> [String: Any]? {
-        
-        if ((properties.arrayValue?.count ?? 0) > 0 || (context.arrayValue?.count ?? 0) > 0) && (contextValues.count > 0){
+        debugPrint("contextValues", contextValues)
+        if (properties.dictionaryValue?.isEmpty == false || context.dictionaryValue?.isEmpty == false) && contextValues.count > 0 {
             var dataDict = [String: Any]()
             
             for (key,value) in contextValues {
@@ -251,12 +251,12 @@ public class SegmentAdobe: DestinationPlugin {
     
     
     private func mapProducts(event: String, properties: JSON, context: JSON, payload: TrackEvent) -> [String: Any]? {
-        if (properties.arrayValue?.count ?? 0) == 0 {
+        if properties.dictionaryValue?.isEmpty == true {
             return nil
         }
         guard let topLevelProperties = extractSEGTopLevelProps(trackEvent: payload) else { return nil }
-        guard let data = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties) else { return nil }
-        var contextData = data
+        let data = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)
+        var contextData: [String: Any] = data ?? [:]
         // If you trigger a product-specific event by using the &&products variable, you must also set that event in the &&events variable.
         // If you do not set that event, it is filtered out during processing.
         contextData["&&events"] = event
@@ -286,7 +286,7 @@ public class SegmentAdobe: DestinationPlugin {
         }else{
             formattedProducts = formatProducts(obj: properties.dictionaryValue ?? [:]) ?? ""
         }
-        
+        contextData["&&products"] = formattedProducts
         return contextData
     }
     
@@ -345,7 +345,6 @@ public class SegmentAdobe: DestinationPlugin {
             return nil
         }
         var productIdentifier = obj[settingsProductId] as? String
-        debugPrint("productIdentifier--", productIdentifier ?? "")
         
         // Fallback to id. Segment's ecommerce v1 Spec'd `id` as the product identifier
         // The setting productIdentifier checks for id, where ecommerce V2
@@ -354,7 +353,7 @@ public class SegmentAdobe: DestinationPlugin {
             productIdentifier = obj["product_id"] as? String ?? obj["id"] as? String ?? ""
         }
         
-        if productIdentifier?.count == 0 {
+        if productIdentifier?.isEmpty == true {
             debugPrint("Product is a required field.")
             return nil
         }
@@ -364,7 +363,7 @@ public class SegmentAdobe: DestinationPlugin {
         let price = obj["price"] as? Double ?? 0.0
         let total = price * Double(quantity)
         
-        let output = [category, productIdentifier ?? "", "\(quantity)", "\(total)"]
+        var output: [String] = [category, productIdentifier ?? "", "\(quantity)", "\(total)"]
         return output.joined(separator: ";")
     }
     
