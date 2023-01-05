@@ -3,13 +3,6 @@
 //  AdobeDestination
 //
 //  Created by Komal Dhingra on 11/22/22.
-//
-
-// NOTE: You can see this plugin in use in the DestinationsExample application.
-//
-// This plugin is NOT SUPPORTED by Segment.  It is here merely as an example,
-// and for your convenience should you find it useful.
-//
 
 // MIT License
 //
@@ -109,8 +102,8 @@ public class SegmentAdobe: DestinationPlugin {
                 if videoEvent == trackEvent {
                     trackVideoEvents(event: event)
                 }
-                return event
             }
+            return event
         }
         
         let mappedEvent = mapEventsV2(event: trackEvent) ?? ""
@@ -153,6 +146,10 @@ public class SegmentAdobe: DestinationPlugin {
         Analytics.clearQueue()
     }
     
+}
+
+private extension SegmentAdobe {
+    
     ///-------------------------
     /// @name Mapping
     ///-------------------------
@@ -173,8 +170,7 @@ public class SegmentAdobe: DestinationPlugin {
         if (properties.dictionaryValue?.isEmpty == false || context.dictionaryValue?.isEmpty == false) && contextValues.count > 0 {
             var dataDict = [String: Any]()
             
-            for (key,value) in contextValues {
-                print("\(key) , \(value)")
+            for (key,_) in contextValues {
                 if key.contains(".") {
                     let arrayofKeyComponents = key.components(separatedBy: ".")
                     // We only support the list of predefined nested context keys per our event spec
@@ -349,7 +345,7 @@ public class SegmentAdobe: DestinationPlugin {
         }
         
         if productIdentifier?.isEmpty == true {
-            debugPrint("Product is a required field.")
+            analytics?.log(message: "Product is a required field.")
             return nil
         }
         
@@ -358,7 +354,7 @@ public class SegmentAdobe: DestinationPlugin {
         let price = obj["price"] as? Double ?? 0.0
         let total = price * Double(quantity)
         
-        var output: [String] = [category, productIdentifier ?? "", "\(quantity)", "\(total)"]
+        let output: [String] = [category, productIdentifier ?? "", "\(quantity)", "\(total)"]
         return output.joined(separator: ";")
     }
     
@@ -398,7 +394,7 @@ public class SegmentAdobe: DestinationPlugin {
         return nil
     }
     
-    //Video Tracking
+    //MARK: Video Tracking
     
     private func createTrackerConfig(event: TrackEvent) -> MediaTracker {
         
@@ -412,7 +408,7 @@ public class SegmentAdobe: DestinationPlugin {
         
         // Creates downloaded content tracker
         config[MediaConstants.TrackerConfig.DOWNLOADED_CONTENT] = true
-
+        
         let tracker = Media.createTrackerWith(config: config)
         
         return tracker
@@ -420,7 +416,7 @@ public class SegmentAdobe: DestinationPlugin {
     
     /**
      Event tracking for Adobe Video Events.
-
+     
      @param payload Payload sent on Segment `track` call
      */
     
@@ -428,7 +424,9 @@ public class SegmentAdobe: DestinationPlugin {
         
         switch (event.event)  {
             
-          case "Video Playback Started":
+        case "Video Playback Started":
+            
+            //Configure media tracker
             mediaTracker = createTrackerConfig(event: event)
             // mediaTracker can return nil if the Adobe required field
             // trackingServer is not properly configured in Segment's UI.
@@ -452,8 +450,8 @@ public class SegmentAdobe: DestinationPlugin {
             mediaTracker.trackSessionStart(info: mediaObject, metadata: videoMetadata)
             analytics?.log(message: "Media tracks Started")
             return
-
-          case "Video Playback Paused":
+            
+        case "Video Playback Paused":
             mediaTracker.trackPause()
             analytics?.log(message: "Media tracks Pause")
             return
@@ -480,9 +478,10 @@ public class SegmentAdobe: DestinationPlugin {
             
             //Mapping with standard events
             let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: "Content")
-            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event) else {
                 return
             }
+            let contextData: [String: Any] = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties) ?? [:]
             let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
@@ -525,7 +524,7 @@ public class SegmentAdobe: DestinationPlugin {
             mediaTracker.trackPlay()
             mediaTracker.updateCurrentPlayhead(time: position)
             mediaTracker.trackEvent(event: MediaEvent.SeekComplete, info: nil, metadata: nil)
-            analytics?.log(message: "SeekComplete")
+            analytics?.log(message: "SeekCompleted")
             return
             
         case "Video Ad Break Started":
@@ -533,12 +532,12 @@ public class SegmentAdobe: DestinationPlugin {
                 return
             }
             mediaTracker.trackEvent(event: MediaEvent.AdBreakStart, info: mediaObject, metadata: nil)
-            analytics?.log(message: "MediaEvent AdBreakStart")
+            analytics?.log(message: "MediaEvent AdBreakStarted")
             return
             
         case "Video Ad Break Completed":
             mediaTracker.trackEvent(event: MediaEvent.AdBreakComplete, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent AdBreakComplete")
+            analytics?.log(message: "MediaEvent AdBreakCompleted")
             return
             
         case "Video Ad Started":
@@ -547,24 +546,25 @@ public class SegmentAdobe: DestinationPlugin {
             }
             //Mapping with standard events
             let standardVideoMetadata = mapStandardVideoMetadata(properties: properties, eventType: "Ad")
-            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event), let contextData = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties)  else {
+            guard let properties = event.properties, let context = event.context, let topLevelProperties = extractSEGTopLevelProps(trackEvent: event) else {
                 return
             }
+            let contextData: [String: Any] = mapContextValues(properties: properties, context: context, topLevelProps: topLevelProperties) ?? [:]
             let convertedContextData: [String: String] = contextData.compactMapValues { "\($0)" }
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
             mediaTracker.trackEvent(event: MediaEvent.AdStart, info: mediaObject, metadata: videoMetadata)
-            analytics?.log(message: "MediaEvent AdStart")
-          return
+            analytics?.log(message: "MediaEvent AdStarted")
+            return
             
         case "Video Ad Skipped":
             mediaTracker.trackEvent(event: MediaEvent.AdSkip, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent AdSkip")
+            analytics?.log(message: "MediaEvent AdSkipped")
             return
             
         case "Video Ad Completed":
             mediaTracker.trackEvent(event: MediaEvent.AdComplete, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent AdComplete")
+            analytics?.log(message: "MediaEvent AdCompleted")
             return
             
         case "Video Quality Updated":
@@ -578,7 +578,7 @@ public class SegmentAdobe: DestinationPlugin {
             mediaTracker.updateQoEObject(qoe: qoeObject)
             return
             
-          default:
+        default:
             break
         }
     }
@@ -589,7 +589,7 @@ public class SegmentAdobe: DestinationPlugin {
         let length = properties["total_length"] as? Double ?? 0
         let adId = properties["asset_id"] as? String ?? ""
         let startTime = properties["start_time"] as? Double ?? 0
-        let position = properties["indexPosition"] as? Int ?? 0
+        let position = properties["position"] as? Int ?? 0
         
         // Adobe also has a third type: linear, which we have chosen
         // to omit as it does not conform to Segment's Video spec
@@ -677,7 +677,6 @@ extension SegmentAdobe: VersionedPlugin {
 }
 
 private struct SegmentAdobeSettings: Codable {
-    let apiKey: String?
     let ssl: Bool?
 }
 
@@ -701,10 +700,10 @@ private extension SegmentAdobe {
                                    "Video Playback Completed",
                                    "Video Content Started",
                                    "Video Content Completed",
-                                   "Video Ad Break Started",   // not spec'd
-                                   "Video Ad Break Completed", // not spec'd
+                                   "Video Ad Break Started",
+                                   "Video Ad Break Completed",
                                    "Video Ad Started",
-                                   "Video Ad Skipped", // not spec'd
+                                   "Video Ad Skipped",
                                    "Video Ad Completed",
                                    "Video Quality Updated"]
     
