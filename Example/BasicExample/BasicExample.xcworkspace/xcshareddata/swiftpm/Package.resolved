@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/adobe/aepsdk-core-ios.git",
         "state": {
           "branch": null,
-          "revision": "aa80812e4b0390f90b6cf57d87b32c851c6ca272",
-          "version": "3.7.3"
+          "revision": "102205eafe0279f3c106686387ef72a8ba4c96bc",
+          "version": "3.7.4"
         }
       },
       {
@@ -42,7 +42,7 @@
         "repositoryURL": "https://github.com/segmentio/analytics-swift",
         "state": {
           "branch": "main",
-          "revision": "36a1546a8db03ce1a3d768e76fd5ce961e2879e3",
+          "revision": "a1965f8403c7f59801ac19996a6281d4441b4215",
           "version": null
         }
       },
