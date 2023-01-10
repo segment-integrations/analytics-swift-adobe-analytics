@@ -520,7 +520,7 @@ private extension SegmentAdobe {
             return
             
         case "Video Playback Seek Completed":
-            let position = event.properties?.dictionaryValue?["position"] as? Double ?? 0
+            let position = event.properties?.dictionaryValue?["position"] as? Double ?? event.properties?.dictionaryValue?["seek_position"] as? Double ?? 0
             mediaTracker.trackPlay()
             mediaTracker.updateCurrentPlayhead(time: position)
             mediaTracker.trackEvent(event: MediaEvent.SeekComplete, info: nil, metadata: nil)
@@ -585,11 +585,11 @@ private extension SegmentAdobe {
     
     private func createWithProperties(properties: [String: Any], eventType: String) -> [String: Any]? {
         let videoName = properties["title"] as? String ?? "Video-Name"
-        let mediaId = properties["content_asset_id"] as? String ?? ""
-        let length = properties["total_length"] as? Double ?? 0
-        let adId = properties["asset_id"] as? String ?? ""
-        let startTime = properties["start_time"] as? Double ?? 0
-        let position = properties["position"] as? Int ?? 0
+        let mediaId = properties["content_asset_id"] as? String ?? properties["contentAssetId"] as? String ?? ""
+        let length = properties["total_length"] as? Double ?? properties["totalLength"] as? Double ?? 0
+        let adId = properties["asset_id"] as? String ?? properties["assetId"] as? String ?? ""
+        let startTime = properties["start_time"] as? Double ?? properties["startTime"] as? Double ?? 0
+        let position = properties["indexPosition"] as? Int ?? properties["index_position"] as? Int ?? properties["position"] as? Int ?? 0
         
         // Adobe also has a third type: linear, which we have chosen
         // to omit as it does not conform to Segment's Video spec
