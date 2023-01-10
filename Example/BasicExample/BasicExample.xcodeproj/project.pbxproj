@@ -46,6 +46,7 @@
 		46EDC70C27C6B8D200B870D7 /* BasicExampleUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BasicExampleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		46EDC71027C6B8D200B870D7 /* BasicExampleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicExampleUITests.swift; sourceTree = "<group>"; };
 		46EDC71227C6B8D200B870D7 /* BasicExampleUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicExampleUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		EA9D6826296D909700EC00B8 /* Adobe-Analytics */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "Adobe-Analytics"; path = ../..; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +79,7 @@
 		46EDC6E927C6B8D100B870D7 = {
 			isa = PBXGroup;
 			children = (
+				EA9D6825296D909700EC00B8 /* Packages */,
 				46EDC6F427C6B8D100B870D7 /* BasicExample */,
 				46EDC70527C6B8D200B870D7 /* BasicExampleTests */,
 				46EDC70F27C6B8D200B870D7 /* BasicExampleUITests */,
@@ -130,6 +132,14 @@
 				46EDC71227C6B8D200B870D7 /* BasicExampleUITestsLaunchTests.swift */,
 			);
 			path = BasicExampleUITests;
+			sourceTree = "<group>";
+		};
+		EA9D6825296D909700EC00B8 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				EA9D6826296D909700EC00B8 /* Adobe-Analytics */,
+			);
+			name = Packages;
 			sourceTree = "<group>";
 		};
 		EAC037482936293D00B124E8 /* Frameworks */ = {
