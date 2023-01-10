@@ -34,14 +34,14 @@ import AEPIdentity
 import AEPAnalytics
 
 
-public class SegmentAdobe: DestinationPlugin {
+public class AdobeDestination: DestinationPlugin {
     public var analytics: Segment.Analytics?
     
     public let timeline = Timeline()
     public let type = PluginType.destination
     public let key = "Adobe Analytics"
     
-    private var adobeSettings: SegmentAdobeSettings?
+    private var adobeSettings: AdobeDestinationSettings?
     
     private var contextValues = [String: Any]()
     private var segmentSettings: Settings!
@@ -63,7 +63,7 @@ public class SegmentAdobe: DestinationPlugin {
         guard type == .initial else { return }
         // Grab the settings and assign them for potential later usage.
         // Note: Since integrationSettings is generic, strongly type the variable.
-        guard let tempSettings: SegmentAdobeSettings = settings.integrationSettings(forPlugin: self) else { return }
+        guard let tempSettings: AdobeDestinationSettings = settings.integrationSettings(forPlugin: self) else { return }
         
         segmentSettings = settings
         
@@ -88,8 +88,8 @@ public class SegmentAdobe: DestinationPlugin {
         // Since Segment does not spec sending products on `screen`, we
         // will only support sending this via trackAction
         
-        if SegmentAdobe.adobeEcommerceEvents.keys.contains(trackEvent) {
-            if let properties = event.properties, let context = event.context , let trackEcommEvent = SegmentAdobe.adobeEcommerceEvents[trackEvent] {
+        if AdobeDestination.adobeEcommerceEvents.keys.contains(trackEvent) {
+            if let properties = event.properties, let context = event.context , let trackEcommEvent = AdobeDestination.adobeEcommerceEvents[trackEvent] {
                 let mappedProducts = mapProducts(event: trackEcommEvent, properties: properties, context: context, payload: event)
                 MobileCore.track(action: trackEcommEvent, data: mappedProducts)
                 analytics?.log(message: "Adobe Analytics trackAction - \(trackEvent)")
@@ -97,8 +97,8 @@ public class SegmentAdobe: DestinationPlugin {
             return event;
         }
         
-        if SegmentAdobe.adobeVideoEvents.contains(trackEvent) {
-            for videoEvent in SegmentAdobe.adobeVideoEvents {
+        if AdobeDestination.adobeVideoEvents.contains(trackEvent) {
+            for videoEvent in AdobeDestination.adobeVideoEvents {
                 if videoEvent == trackEvent {
                     trackVideoEvents(event: event)
                 }
@@ -148,7 +148,7 @@ public class SegmentAdobe: DestinationPlugin {
     
 }
 
-private extension SegmentAdobe {
+private extension AdobeDestination {
     
     ///-------------------------
     /// @name Mapping
@@ -670,17 +670,17 @@ private extension SegmentAdobe {
     }
 }
 
-extension SegmentAdobe: VersionedPlugin {
+extension AdobeDestination: VersionedPlugin {
     public static func version() -> String {
         return __destination_version
     }
 }
 
-private struct SegmentAdobeSettings: Codable {
+private struct AdobeDestinationSettings: Codable {
     let ssl: Bool?
 }
 
-private extension SegmentAdobe {
+private extension AdobeDestination {
     
     static var adobeEcommerceEvents = ["Product Added": "scAdd",
                                        "Product Removed": "scRemove",
