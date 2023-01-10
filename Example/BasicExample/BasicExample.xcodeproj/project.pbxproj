@@ -15,7 +15,7 @@
 		46EDC71127C6B8D200B870D7 /* BasicExampleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46EDC71027C6B8D200B870D7 /* BasicExampleUITests.swift */; };
 		46EDC71327C6B8D200B870D7 /* BasicExampleUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46EDC71227C6B8D200B870D7 /* BasicExampleUITestsLaunchTests.swift */; };
 		46EDC72127C6B92C00B870D7 /* Segment in Frameworks */ = {isa = PBXBuildFile; productRef = 46EDC72027C6B92C00B870D7 /* Segment */; };
-		EAC0374A2936293D00B124E8 /* SegmentAdobeDestination in Frameworks */ = {isa = PBXBuildFile; productRef = EAC037492936293D00B124E8 /* SegmentAdobeDestination */; };
+		EA642B22296D340A00235F57 /* SegmentAdobe in Frameworks */ = {isa = PBXBuildFile; productRef = EA642B21296D340A00235F57 /* SegmentAdobe */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,8 +53,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EA642B22296D340A00235F57 /* SegmentAdobe in Frameworks */,
 				46EDC72127C6B92C00B870D7 /* Segment in Frameworks */,
-				EAC0374A2936293D00B124E8 /* SegmentAdobeDestination in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,7 +157,7 @@
 			name = BasicExample;
 			packageProductDependencies = (
 				46EDC72027C6B92C00B870D7 /* Segment */,
-				EAC037492936293D00B124E8 /* SegmentAdobeDestination */,
+				EA642B21296D340A00235F57 /* SegmentAdobe */,
 			);
 			productName = BasicExample;
 			productReference = 46EDC6F227C6B8D100B870D7 /* BasicExample.app */;
@@ -616,9 +616,9 @@
 			package = 46EDC71F27C6B92C00B870D7 /* XCRemoteSwiftPackageReference "analytics-swift" */;
 			productName = Segment;
 		};
-		EAC037492936293D00B124E8 /* SegmentAdobeDestination */ = {
+		EA642B21296D340A00235F57 /* SegmentAdobe */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = SegmentAdobeDestination;
+			productName = SegmentAdobe;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

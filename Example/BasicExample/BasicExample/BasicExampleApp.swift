@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Segment
-import SegmentAdobeDestination
+import SegmentAdobe
 
 @main
 struct BasicExampleApp: App {
@@ -23,7 +23,7 @@ extension Analytics {
         let analytics = Analytics(configuration: Configuration(writeKey: "1Y90gFG3fBWv33PsE5piliJjF6xIOVmV")
                     .flushAt(3)
                     .trackApplicationLifecycleEvents(true))
-        analytics.add(plugin: SegmentAdobe(appId: "05eee2681a65/8568043f38bd/launch-cb1c6fbb8ece-development"))
+        analytics.add(plugin: AdobeDestination(appId: "05eee2681a65/8568043f38bd/launch-cb1c6fbb8ece-development"))
         return analytics
     }
 }
