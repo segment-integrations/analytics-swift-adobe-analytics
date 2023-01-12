@@ -26,17 +26,17 @@ let package = Package(
             from: "1.1.2"
         ),
         .package(
-            name: "Adobe-Media-Analytics",
+            name: "AEPMedia",
             url: "https://github.com/adobe/aepsdk-media-ios.git",
             from: "3.0.0"
         ),
         .package(
-            name: "Adobe-Analytics",
+            name: "AEPAnalytics",
             url: "https://github.com/adobe/aepsdk-analytics-ios.git",
             from: "3.0.0"
         ),
         .package(
-            name: "Adobe-Core",
+            name: "AEPCore",
             url: "https://github.com/adobe/aepsdk-core-ios.git",
             from: "3.0.0"
         )
@@ -48,11 +48,11 @@ let package = Package(
                 name: "SegmentAdobe",
                 dependencies: ["Segment", .product(
                     name: "AEPAnalytics",
-                    package: "Adobe-Analytics"), .product(
+                    package: "AEPAnalytics"), .product(
                         name: "AEPMedia",
-                        package: "Adobe-Media-Analytics"), .product(
+                        package: "AEPMedia"), .product(
                             name: "AEPIdentity",
-                            package: "Adobe-Core")]),
+                            package: "AEPCore")]),
         
         // TESTS ARE HANDLED VIA THE EXAMPLE APP.
     ]
