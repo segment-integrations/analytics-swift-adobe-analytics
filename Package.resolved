@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/adobe/aepsdk-core-ios.git",
         "state": {
           "branch": null,
-          "revision": "aa80812e4b0390f90b6cf57d87b32c851c6ca272",
-          "version": "3.7.3"
+          "revision": "7d2b56eea0ca0c47ecd7950782a26cbd30162dfb",
+          "version": "3.8.2"
         }
       },
       {
@@ -33,8 +33,8 @@
         "repositoryURL": "https://github.com/adobe/aepsdk-rulesengine-ios.git",
         "state": {
           "branch": null,
-          "revision": "5907e2ed364135448a2a5d77a76c2ff971396397",
-          "version": "1.2.0"
+          "revision": "583a8e6d060c0437fa5e40b1367d382b64a96f04",
+          "version": "1.2.3"
         }
       },
       {
@@ -42,8 +42,8 @@
         "repositoryURL": "https://github.com/segmentio/analytics-swift.git",
         "state": {
           "branch": null,
-          "revision": "939a04164cd4db7ca666dd1e09663edc2d34c4f3",
-          "version": "1.3.3"
+          "revision": "79fb17a5d4abf8f80e6a0935e57c7df7b670a6c0",
+          "version": "1.4.1"
         }
       },
       {

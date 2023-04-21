@@ -33,8 +33,18 @@ import AEPMedia
 import AEPIdentity
 import AEPAnalytics
 
+@objc(SEGAdobeDestination)
+public class ObjCSegmentAdobe: NSObject, ObjCPlugin, ObjCPluginShim {
+    private var appId: String!
+    
+    public func initializeAdobe(appId: String){
+        self.appId = appId
+    }
+    
+    public func instance() -> EventPlugin { return AdobeDestination(appId: appId) }
+}
 
-public class AdobeDestination: DestinationPlugin {
+public class AdobeDestination: EventPlugin {
     public var analytics: Segment.Analytics?
     
     public let timeline = Timeline()
@@ -63,7 +73,7 @@ public class AdobeDestination: DestinationPlugin {
         guard type == .initial else { return }
         // Grab the settings and assign them for potential later usage.
         // Note: Since integrationSettings is generic, strongly type the variable.
-        guard let tempSettings: AdobeDestinationSettings = settings.integrationSettings(forPlugin: self) else { return }
+        guard let tempSettings: AdobeDestinationSettings = settings.integrationSettings(forKey: key) else { return }
         
         segmentSettings = settings
         
@@ -76,7 +86,6 @@ public class AdobeDestination: DestinationPlugin {
     
     public func identify(event: IdentifyEvent) -> IdentifyEvent? {
         Analytics.setVisitorIdentifier(visitorIdentifier: event.userId ?? "")
-        analytics?.log(message: "Adobe identify \(String(describing: event.userId))")
         return event
     }
     
@@ -92,7 +101,6 @@ public class AdobeDestination: DestinationPlugin {
             if let properties = event.properties, let context = event.context , let trackEcommEvent = AdobeDestination.adobeEcommerceEvents[trackEvent] {
                 let mappedProducts = mapProducts(event: trackEcommEvent, properties: properties, context: context, payload: event)
                 MobileCore.track(action: trackEcommEvent, data: mappedProducts)
-                analytics?.log(message: "Adobe Analytics trackAction - \(trackEvent)")
             }
             return event;
         }
@@ -108,7 +116,6 @@ public class AdobeDestination: DestinationPlugin {
         
         let mappedEvent = mapEventsV2(event: trackEvent) ?? ""
         if mappedEvent != trackEvent {
-            analytics?.log(message: "Event must be configured in Adobe and in the EventsV2 setting in Segment before sending.")
             return event
         }
         
@@ -119,7 +126,6 @@ public class AdobeDestination: DestinationPlugin {
             } else {
                 MobileCore.track(action: trackEvent, data: event.properties?.dictionaryValue ?? nil)
             }
-            analytics?.log(message: "Adobe Analytics trackAction - \(trackEvent)")
         } else{
             MobileCore.track(action: trackEvent, data: event.properties?.dictionaryValue ?? nil)
         }
@@ -138,7 +144,6 @@ public class AdobeDestination: DestinationPlugin {
         else{
             MobileCore.track(state: event.name, data: nil)
         }
-        analytics?.log(message: "Adobe Analytics trackState - \(String(describing: event.name))")
         return event
     }
     
@@ -345,7 +350,6 @@ private extension AdobeDestination {
         }
         
         if productIdentifier?.isEmpty == true {
-            analytics?.log(message: "Product is a required field.")
             return nil
         }
         
@@ -448,30 +452,23 @@ private extension AdobeDestination {
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
             mediaTracker.trackSessionStart(info: mediaObject, metadata: videoMetadata)
-            analytics?.log(message: "Media tracks Started")
             return
             
         case "Video Playback Paused":
             mediaTracker.trackPause()
-            analytics?.log(message: "Media tracks Pause")
             return
             
         case "Video Playback Resumed":
             mediaTracker.trackPlay()
-            analytics?.log(message: "Media tracks Resumed")
             return
             
         case "Video Playback Completed":
             mediaTracker.trackComplete()
-            analytics?.log(message: "Media track Completed")
             mediaTracker.trackSessionEnd()
-            analytics?.log(message: "Media track Session End")
             return
             
         case "Video Content Started":
             mediaTracker.trackPlay()
-            analytics?.log(message: "trackPlay")
-            
             guard let properties = event.properties?.dictionaryValue, let mediaObject = createWithProperties(properties: properties, eventType: "Content") else {
                 return
             }
@@ -486,29 +483,24 @@ private extension AdobeDestination {
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
             mediaTracker.trackEvent(event: MediaEvent.ChapterStart, info: mediaObject, metadata: videoMetadata)
-            analytics?.log(message: "MediaEvent Chapter Start")
             return
             
         case "Video Content Completed":
             mediaTracker.trackEvent(event: MediaEvent.ChapterComplete, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent ChapterComplete")
             return
             
         case "Video Playback Interrupted":
             mediaTracker.trackPause()
-            analytics?.log(message: "MediaEvent Interrupted")
             return
             
         case "Video Playback Buffer Started":
             mediaTracker.trackPause()
             mediaTracker.trackEvent(event: MediaEvent.BufferStart, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent Buffer Started")
             return
             
         case "Video Playback Seek Started":
             mediaTracker.trackPause()
             mediaTracker.trackEvent(event: MediaEvent.SeekStart, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent Seek Started")
             return
             
         case "Video Playback Buffer Completed":
@@ -516,7 +508,6 @@ private extension AdobeDestination {
             mediaTracker.trackPlay()
             mediaTracker.updateCurrentPlayhead(time: position)
             mediaTracker.trackEvent(event: MediaEvent.BufferComplete, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent BufferComplete")
             return
             
         case "Video Playback Seek Completed":
@@ -524,7 +515,6 @@ private extension AdobeDestination {
             mediaTracker.trackPlay()
             mediaTracker.updateCurrentPlayhead(time: position)
             mediaTracker.trackEvent(event: MediaEvent.SeekComplete, info: nil, metadata: nil)
-            analytics?.log(message: "SeekCompleted")
             return
             
         case "Video Ad Break Started":
@@ -532,12 +522,10 @@ private extension AdobeDestination {
                 return
             }
             mediaTracker.trackEvent(event: MediaEvent.AdBreakStart, info: mediaObject, metadata: nil)
-            analytics?.log(message: "MediaEvent AdBreakStarted")
             return
             
         case "Video Ad Break Completed":
             mediaTracker.trackEvent(event: MediaEvent.AdBreakComplete, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent AdBreakCompleted")
             return
             
         case "Video Ad Started":
@@ -554,17 +542,14 @@ private extension AdobeDestination {
             var videoMetadata: [String: String] = standardVideoMetadata.compactMapValues { "\($0)" }
             videoMetadata = videoMetadata.merging(convertedContextData) { (current, _) in current }
             mediaTracker.trackEvent(event: MediaEvent.AdStart, info: mediaObject, metadata: videoMetadata)
-            analytics?.log(message: "MediaEvent AdStarted")
             return
             
         case "Video Ad Skipped":
             mediaTracker.trackEvent(event: MediaEvent.AdSkip, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent AdSkipped")
             return
             
         case "Video Ad Completed":
             mediaTracker.trackEvent(event: MediaEvent.AdComplete, info: nil, metadata: nil)
-            analytics?.log(message: "MediaEvent AdCompleted")
             return
             
         case "Video Quality Updated":
@@ -612,7 +597,6 @@ private extension AdobeDestination {
         } else if eventType == "Ad" {
             return Media.createAdObjectWith(name: videoName, id: adId, position: position, length: length)
         } else {
-            analytics?.log(message: "Event type not passed through.")
             return nil
         }
     }
