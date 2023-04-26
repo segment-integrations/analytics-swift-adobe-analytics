@@ -44,7 +44,7 @@ public class ObjCSegmentAdobe: NSObject, ObjCPlugin, ObjCPluginShim {
     public func instance() -> EventPlugin { return AdobeDestination(appId: appId) }
 }
 
-public class AdobeDestination: EventPlugin {
+public class AdobeDestination: DestinationPlugin {
     public var analytics: Segment.Analytics?
     
     public let timeline = Timeline()
@@ -73,7 +73,7 @@ public class AdobeDestination: EventPlugin {
         guard type == .initial else { return }
         // Grab the settings and assign them for potential later usage.
         // Note: Since integrationSettings is generic, strongly type the variable.
-        guard let tempSettings: AdobeDestinationSettings = settings.integrationSettings(forKey: key) else { return }
+        guard let tempSettings: AdobeDestinationSettings = settings.integrationSettings(forPlugin: self) else { return }
         
         segmentSettings = settings
         
