@@ -20,10 +20,10 @@ struct BasicExampleApp: App {
 
 extension Analytics {
     static var main: Analytics {
-        let analytics = Analytics(configuration: Configuration(writeKey: "1Y90gFG3fBWv33PsE5piliJjF6xIOVmV")
+        let analytics = Analytics(configuration: Configuration(writeKey: "<YOUR WRITE KEY>")
                     .flushAt(3)
                     .trackApplicationLifecycleEvents(true))
-        analytics.add(plugin: AdobeDestination(appId: "05eee2681a65/8568043f38bd/launch-cb1c6fbb8ece-development"))
+        analytics.add(plugin: AdobeDestination(appId: "<YOUR ADOBE APP ID>"))
         return analytics
     }
 }
